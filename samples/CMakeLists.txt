@@ -39,6 +39,8 @@ set(MATERIAL_SRCS
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
         materials/texturedLit.mat
+	materials/pointRender.mat
+	materials/splat.mat
 )
 
 # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
@@ -297,6 +299,9 @@ if (NOT ANDROID)
     add_demo(texturedquad)
     add_demo(vbotest)
     add_demo(viewtest)
+    add_demo(overdraw_demo)
+    add_demo(point_render)
+    add_demo(surfacesplating)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
@@ -310,6 +315,7 @@ if (NOT ANDROID)
     target_link_libraries(sample_cloth PRIVATE filameshio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
+    target_link_libraries(overdraw_demo PRIVATE gltf-demo-resources viewer)
 
     if (FILAMENT_DISABLE_MATOPT)
         add_definitions(-DFILAMENT_DISABLE_MATOPT=1)
@@ -355,3 +361,9 @@ set_target_properties(assets PROPERTIES FOLDER Samples/Assets)
 add_custom_target(envs DEPENDS ${target_envmaps})
 add_dependencies(filament envs)
 set_target_properties(envs PROPERTIES FOLDER Samples/Assets)
+
+# ========== 添加 MyAssets 目录的复制 ==========
+file(COPY ../samples/MyAssets DESTINATION ${PROJECT_BINARY_DIR})
+add_custom_target(myassets ALL DEPENDS myassets)
+add_dependencies(filament myassets)
+set_target_properties(myassets PROPERTIES FOLDER Samples/Assets)
