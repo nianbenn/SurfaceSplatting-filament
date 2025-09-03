@@ -17,30 +17,30 @@ set(RESOURCE_BINS)
 # ==================================================================================================
 
 set(MATERIAL_SRCS
-        materials/aiDefaultMat.mat
-        materials/bakedColor.mat
-        materials/bakedTexture.mat
-        materials/aoPreview.mat
-        materials/arrayTexture.mat
-        materials/groundShadow.mat
-        materials/heightfield.mat
-        materials/image.mat
-        materials/mirror.mat
+        #materials/aiDefaultMat.mat
+        #materials/bakedColor.mat
+        #materials/bakedTexture.mat
+        #materials/aoPreview.mat
+        #materials/arrayTexture.mat
+        #materials/groundShadow.mat
+        #materials/heightfield.mat
+        #materials/image.mat
+        #materials/mirror.mat
         materials/overdraw.mat
-        materials/sandboxCloth.mat
-        materials/sandboxLit.mat
-        materials/sandboxLitFade.mat
-        materials/sandboxLitTransparent.mat
-        materials/sandboxLitThinRefraction.mat
-        materials/sandboxLitThinRefractionSsr.mat
-        materials/sandboxLitSolidRefraction.mat
-        materials/sandboxLitSolidRefractionSsr.mat
-        materials/sandboxSpecGloss.mat
-        materials/sandboxSubsurface.mat
-        materials/sandboxUnlit.mat
-        materials/texturedLit.mat
-	materials/pointRender.mat
-	materials/splat.mat
+        #materials/sandboxCloth.mat
+        #materials/sandboxLit.mat
+        #materials/sandboxLitFade.mat
+        #materials/sandboxLitTransparent.mat
+        #materials/sandboxLitThinRefraction.mat
+        #materials/sandboxLitThinRefractionSsr.mat
+        #materials/sandboxLitSolidRefraction.mat
+        #materials/sandboxLitSolidRefractionSsr.mat
+        #materials/sandboxSpecGloss.mat
+        #materials/sandboxSubsurface.mat
+        #materials/sandboxUnlit.mat
+        #materials/texturedLit.mat
+	    materials/pointRender.mat
+	    materials/splat.mat
 )
 
 # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
@@ -265,57 +265,57 @@ function(add_demo NAME)
 endfunction()
 
 if (NOT ANDROID)
-    add_demo(animation)
-    add_demo(depthtesting)
-    add_demo(frame_generator)
-    add_demo(gltf_viewer)
-    add_demo(gltf_instances)
-    add_demo(heightfield)
-    add_demo(hellomorphing)
-    add_demo(hellopbr)
-    add_demo(hellotriangle)
-    add_demo(helloskinning)
-    add_demo(helloskinningbuffer)
-    add_demo(helloskinningbuffer_morebones)
-    add_demo(hellostereo)
-    add_demo(hybrid_instancing)
-    add_demo(image_viewer)
-    add_demo(lightbulb)
-    add_demo(material_sandbox)
-    add_demo(multiple_windows)
+    #add_demo(animation)
+    #add_demo(depthtesting)
+    #add_demo(frame_generator)
+    #add_demo(gltf_viewer)
+    #add_demo(gltf_instances)
+    #add_demo(heightfield)
+    #add_demo(hellomorphing)
+    #add_demo(hellopbr)
+    #add_demo(hellotriangle)
+    #add_demo(helloskinning)
+    #add_demo(helloskinningbuffer)
+    #add_demo(helloskinningbuffer_morebones)
+    #add_demo(hellostereo)
+    #add_demo(hybrid_instancing)
+    #add_demo(image_viewer)
+    #add_demo(lightbulb)
+    #add_demo(material_sandbox)
+    #add_demo(multiple_windows)
     # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
     # https://github.com/gpuweb/gpuweb/issues/1190
     if (NOT FILAMENT_SUPPORTS_WEBGPU)
         add_demo(point_sprites)
     endif ()
-    add_demo(rendertarget)
-    add_demo(sample_cloth)
-    add_demo(sample_full_pbr)
-    add_demo(sample_normal_map)
-    add_demo(shadowtest)
-    add_demo(skinningtest)
-    add_demo(strobecolor)
-    add_demo(suzanne)
-    add_demo(texturedquad)
-    add_demo(vbotest)
-    add_demo(viewtest)
-    add_demo(overdraw_demo)
+    #add_demo(rendertarget)
+    #add_demo(sample_cloth)
+    #add_demo(sample_full_pbr)
+    #add_demo(sample_normal_map)
+    #add_demo(shadowtest)
+    #add_demo(skinningtest)
+    #add_demo(strobecolor)
+    #add_demo(suzanne)
+    #add_demo(texturedquad)
+    #add_demo(vbotest)
+    #add_demo(viewtest)
+    #add_demo(overdraw_demo)
     add_demo(point_render)
     add_demo(surfacesplating)
 
     # Sample app specific
-    target_link_libraries(frame_generator PRIVATE imageio)
-    target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio viewer)
-    target_link_libraries(gltf_instances PRIVATE gltf-demo-resources uberarchive gltfio viewer)
-    target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
-    target_link_libraries(hellostereo PRIVATE filameshio suzanne-resources)
-    target_link_libraries(image_viewer PRIVATE viewer imageio)
-    target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
-    target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
-    target_link_libraries(sample_cloth PRIVATE filameshio)
-    target_link_libraries(sample_normal_map PRIVATE filameshio)
-    target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
-    target_link_libraries(overdraw_demo PRIVATE gltf-demo-resources viewer)
+#    target_link_libraries(frame_generator PRIVATE imageio)
+#    target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio viewer)
+#   target_link_libraries(gltf_instances PRIVATE gltf-demo-resources uberarchive gltfio viewer)
+#    target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
+#    target_link_libraries(hellostereo PRIVATE filameshio suzanne-resources)
+#    target_link_libraries(image_viewer PRIVATE viewer imageio)
+#    target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
+#    target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
+#    target_link_libraries(sample_cloth PRIVATE filameshio)
+#    target_link_libraries(sample_normal_map PRIVATE filameshio)
+#    target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
+#    target_link_libraries(overdraw_demo PRIVATE gltf-demo-resources viewer)
 
     if (FILAMENT_DISABLE_MATOPT)
         add_definitions(-DFILAMENT_DISABLE_MATOPT=1)
@@ -326,8 +326,8 @@ if (NOT ANDROID)
     # ==============================================================================================
     # Installation
     # ==============================================================================================
-    install(TARGETS gltf_viewer RUNTIME DESTINATION bin)
-    install(TARGETS material_sandbox RUNTIME DESTINATION bin)
+#    install(TARGETS gltf_viewer RUNTIME DESTINATION bin)
+#    install(TARGETS material_sandbox RUNTIME DESTINATION bin)
 
     # Install resources
     install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/fonts DESTINATION bin/assets)

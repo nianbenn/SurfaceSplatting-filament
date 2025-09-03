@@ -89,7 +89,7 @@ static std::vector<uint32_t> kIndices;
 int main(int argc, char* argv[]) {
     Config config;
     config.title = "surfacesplating";
-    config.cameraMode = camutils::Mode::FREE_FLIGHT;
+    //config.cameraMode = camutils::Mode::FREE_FLIGHT;
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
 
         app.camera = &view->getCamera();
         view->setCamera(app.camera);
-        setupCamera(view, app);
+        //setupCamera(view, app);
 
         app.skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
         scene->setSkybox(app.skybox);
@@ -141,9 +141,19 @@ static void createSplatTexture(Engine* engine, App& app) {
                       .build(*engine);
     app.tex->setImage(*engine, 0, std::move(buffer));
 }
+void loadtestFile(std::vector<SSurfel>& voSurfels) {
+    voSurfels.resize(3);
+    for (size_t i = 0; i < voSurfels.size(); ++i) {
+        voSurfels[i].position = float3(0+i, 0+i*i, 0+i*i);
+        voSurfels[i].radius =5.0f;
+        voSurfels[i].normal = float3(1, 1, 1);
+        voSurfels[i].color = float4(1, 0, 0, 1);
+    }
+}
 static void InitVb(Engine* engine, App& app) {
     // 加载Rsf文件
-    std::cout << "isloadRsfSuccess : " << loadRsfFile(RsfPath, app.mSurfels) << std::endl;
+    std::cout << "isloadRsfSuccess : " << loadRsfFile(FilamentApp::getRootAssetsPath() + RsfPath, app.mSurfels) << std::endl;
+    //loadtestFile(app.mSurfels);
     std::cout << "Point number: " << app.mSurfels.size() << std::endl;
     // VBO
     app.vertices.reserve(app.mSurfels.size() * 4);
@@ -220,8 +230,8 @@ static void createSurfaceSplat(Engine* engine, Scene* scene, App& app) {
     app.renderable = EntityManager::get().create();
     app.matInstance = app.mat->createInstance();
 
-    app.matInstance->setParameter("radiusScale", 0.25f);
-    app.matInstance->setParameter("forwardFactor", 0.5f);
+    app.matInstance->setParameter("radiusScale", 0.5f);
+    app.matInstance->setParameter("forwardFactor", 0.0f);
     app.matInstance->setParameter("depthPrepass", false);
     //app.matInstance->setParameter("depthPrepass", true);
 

@@ -24,6 +24,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 
 #include "generated/resources/resources.h"
 
@@ -89,6 +90,7 @@ static std::vector<uint32_t> kIndices;
 
 int main(int argc, char* argv[])
 {
+    std::cout << "Current working directory: " << std::filesystem::current_path() << std::endl;
     Config config;
     config.title = "point_render";
     //config.cameraMode = camutils::Mode::FREE_FLIGHT;
@@ -117,8 +119,6 @@ int main(int argc, char* argv[])
         engine->destroy(app.mat);
         engine->destroy(app.vb);
         engine->destroy(app.ib);
-        engine->destroy(app.splatView);
-        engine->destroy(app.splatTarget);
 
     };
 
@@ -149,7 +149,8 @@ static void createSplatTexture(Engine* engine, App& app) {
 }
 static void InitVb(Engine* engine, App& app) {
     // 加载Rsf文件
-    std::cout << "isloadRsfSuccess : " << loadRsfFile(RsfPath, app.mSurfels) << std::endl;   
+    std::cout << "isloadRsfSuccess : "
+              << loadRsfFile(FilamentApp::getRootAssetsPath() + RsfPath, app.mSurfels) << std::endl;   
     std::cout << "Point number: " << app.mSurfels.size() << std::endl;
     const uint32_t pointNumber = app.mSurfels.size();
     
