@@ -99,10 +99,6 @@ int main(int argc, char* argv[]) {
         initVbIb(vEngine, app);
         createSurfaceSplat(vEngine, vScene, app);
 
-        //app._pCamera = &vView->getCamera();
-        //vView->setCamera(app._pCamera);
-        //setupCamera(app);
-
         app._pSkybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*vEngine);
         vScene->setSkybox(app._pSkybox);
     };
@@ -118,6 +114,7 @@ int main(int argc, char* argv[]) {
     FilamentApp& filamentApp = FilamentApp::get();
     //filamentApp.setCameraFocalLength(5.0f);
     //filamentApp.setCameraNearFar(0.01f, 100.0f);
+
     filamentApp.run(config, setup, cleanup);
     return 0;
 }
@@ -144,9 +141,9 @@ static void createSplatTexture(Engine* vEngine, SApp& vApp) {
 void loadtestFile(std::vector<SSurfel>& voSurfels) {
     voSurfels.resize(3);
     for (size_t i = 0; i < voSurfels.size(); ++i) {
-        voSurfels[i]._Position = float3(0+i, 0+i*i, 0+i*i);
-        voSurfels[i]._Radius =5.0f;
-        voSurfels[i]._Normal = float3(1, 1, 1);
+        voSurfels[i]._Position = float3(0+i, i+i*i, 0+i*i);
+        voSurfels[i]._Radius =2.0f;
+        voSurfels[i]._Normal = float3(0, 0, -1);
         voSurfels[i]._Color = float4(1, 0, 0, 1);
     }
 }
@@ -154,6 +151,7 @@ void loadtestFile(std::vector<SSurfel>& voSurfels) {
 static void initVbIb(Engine * vEngine, SApp & vApp) {
     // 加载Rsf文件
     std::cout << "isloadRsfSuccess : " << loadRsfFile(FilamentApp::getRootAssetsPath() + pRsfPath, vApp._Surfels) << std::endl;
+    //loadtestFile(vApp._Surfels);
     std::cout << "Point number: " << vApp._Surfels.size() << std::endl;
     // VBO
     vApp._Vertices.reserve(vApp._Surfels.size() * 4);
@@ -163,8 +161,9 @@ static void initVbIb(Engine * vEngine, SApp & vApp) {
             vApp._Vertices.push_back({ s._Position, s._Normal, s._Radius, s._Color, quad[i]});
     }
     const uint32_t pointNumber = vApp._Vertices.size();
+    std::cout << "Vertex number: " << pointNumber << std::endl;
     // VI
-    static constexpr uint32_t quadIndices[6] = { 0, 1, 2, 1, 3, 2 };
+    static constexpr uint32_t quadIndices[6] = { 0, 1, 2, 3, 2, 1 };
     kIndices.reserve(vApp._Surfels.size()*6);
     for (uint32_t surfId = 0; surfId < vApp._Surfels.size(); ++surfId) {
         uint32_t base = surfId * 4; // 每个 surfel 占 4 个顶点
@@ -207,7 +206,7 @@ static void initVbIb(Engine * vEngine, SApp & vApp) {
                              offsetof(SVertex, _Radius), sizeof(SVertex))
                      .attribute(VertexAttribute::COLOR, 0, AttributeType::FLOAT4,
                              offsetof(SVertex, _Color), sizeof(SVertex))
-                     .attribute(VertexAttribute::UV0, 0, AttributeType::FLOAT2, 
+                     .attribute(VertexAttribute::CUSTOM2, 0, AttributeType::FLOAT2, 
                              offsetof(SVertex, _Quad), sizeof(SVertex))
                      .build(*vEngine);
     vApp._pVb->setBufferAt(*vEngine, 0,
@@ -229,16 +228,16 @@ static void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp) {
     vApp._Renderable = EntityManager::get().create();
     vApp._pMatInstance = vApp._pMat->createInstance();
 
-    vApp._pMatInstance->setParameter("radiusScale", 0.25f);
+    vApp._pMatInstance->setParameter("radiusScale", 0.15f);
     vApp._pMatInstance->setParameter("forwardFactor", 0.5f);
     vApp._pMatInstance->setParameter("depthPrepass", false);
-    //vApp._pMatInstance->setParameter("depthPrepass", true);
+
 
     RenderableManager::Builder(1)
             .boundingBox({ vApp._MinBounds, vApp._MaxBounds })
             .material(0, vApp._pMatInstance)
             .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vApp._pVb, vApp._pIb, 0,
-                    vApp._Vertices.size())
+                    vApp._Surfels.size()*6)
             .culling(false)
             .receiveShadows(false)
             .castShadows(false)

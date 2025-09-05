@@ -5,8 +5,8 @@ material {
         { type : float,    name : forwardFactor },
         { type : bool,     name : depthPrepass }
     ],
-    requires : [ position, color, custom0, custom1, uv0 ],
-    variables : [ vnormal ],
+    requires : [ position, color, custom0, custom1, custom2],
+    variables : [ vnormal ,vuv],
     shadingModel : unlit,
     blending : add,
     depthWrite : true
@@ -30,6 +30,7 @@ vertex {
     }
     void materialVertex(inout MaterialVertexInputs material) {
         material.vnormal = normalize(getCustom1());
+        material.vuv.xy = getCustom2().xy;
 
         mat3 RotMat = mat3(1.0);
         vec3 QuadNormal = vec3(0.0, 0.0, 1.0);
@@ -40,7 +41,7 @@ vertex {
             float rotAngle = acos(dot(QuadNormal, getCustom1().xyz));
             RotMat = calcRotation(rotAxis, rotAngle);
         }
-        vec3 worldPos = RotMat * scaledRadius * vec3(material.uv0.xy,0) + getPosition().xyz;
+        vec3 worldPos = RotMat * scaledRadius * vec3(getCustom2().xy,0) + getPosition().xyz;
         if (materialParams.depthPrepass) {
             vec3 viewDir = normalize(worldPos - getWorldCameraPosition());
             worldPos += viewDir * scaledRadius * materialParams.forwardFactor;
@@ -51,7 +52,7 @@ vertex {
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        float len = length(getUV0());
+        float len = length(variable_vuv.xy);
         if (len > 1.0) {
             discard;
         }

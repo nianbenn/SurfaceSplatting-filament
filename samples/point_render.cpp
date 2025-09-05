@@ -93,7 +93,6 @@ int main(int argc, char* argv[])
     std::cout << "Current working directory: " << std::filesystem::current_path() << std::endl;
     Config config;
     config.title = "point_render";
-    //config.cameraMode = camutils::Mode::FREE_FLIGHT;
     SApp app;
     auto setup = [&app](Engine* vEngine, View* vView, Scene* vScene) {
         app._pEngine = vEngine;
@@ -103,9 +102,9 @@ int main(int argc, char* argv[])
         initVbIb(vEngine, app);
         createPointRender(vEngine, vScene, app);
         
-        app._pCamera = &vView->getCamera();
-        vView->setCamera(app._pCamera);
-        setupCamera(app);
+        //app._pCamera = &vView->getCamera();
+        //vView->setCamera(app._pCamera);
+        ////setupCamera(app);
 
         app._pSkybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0}).build(*vEngine);
         vScene->setSkybox(app._pSkybox);
@@ -218,8 +217,6 @@ static void createPointRender(Engine* vEngine, Scene* vScene, SApp& vApp) {
                       .build(*vEngine);
     vApp._Renderable = EntityManager::get().create();
     vApp._pMatInstance = vApp._pMat->createInstance();
-    vApp._pMatInstance->setParameter("fade", vApp._pTex,
-            TextureSampler(MinFilter::LINEAR, MagFilter::LINEAR));
     vApp._pMatInstance->setParameter("pointSizeScale", 10.0f);
 
     RenderableManager::Builder(1)

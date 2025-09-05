@@ -12,10 +12,6 @@ material {
         { 
             type : float, 
             name : pointSizeScale 
-        },
-        {
-            type : sampler2d,
-            name : fade
         }
     ]
 }

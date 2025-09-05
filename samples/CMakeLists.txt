@@ -17,7 +17,7 @@ set(RESOURCE_BINS)
 # ==================================================================================================
 
 set(MATERIAL_SRCS
-        #materials/aiDefaultMat.mat
+        materials/aiDefaultMat.mat
         #materials/bakedColor.mat
         #materials/bakedTexture.mat
         #materials/aoPreview.mat
@@ -25,7 +25,7 @@ set(MATERIAL_SRCS
         #materials/groundShadow.mat
         #materials/heightfield.mat
         #materials/image.mat
-        #materials/mirror.mat
+        materials/mirror.mat
         materials/overdraw.mat
         #materials/sandboxCloth.mat
         #materials/sandboxLit.mat
@@ -288,7 +288,7 @@ if (NOT ANDROID)
     if (NOT FILAMENT_SUPPORTS_WEBGPU)
         add_demo(point_sprites)
     endif ()
-    #add_demo(rendertarget)
+    add_demo(rendertarget)
     #add_demo(sample_cloth)
     #add_demo(sample_full_pbr)
     #add_demo(sample_normal_map)
@@ -311,7 +311,7 @@ if (NOT ANDROID)
 #    target_link_libraries(hellostereo PRIVATE filameshio suzanne-resources)
 #    target_link_libraries(image_viewer PRIVATE viewer imageio)
 #    target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
-#    target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
+    target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
 #    target_link_libraries(sample_cloth PRIVATE filameshio)
 #    target_link_libraries(sample_normal_map PRIVATE filameshio)
 #    target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
