@@ -12,39 +12,40 @@ material {
     depthWrite : true
 }
 vertex {
-    mat3 rotationAlign(vec3 from, vec3 to) {
-        vec3  v = cross(from, to);
-        float c = dot(from, to);
-        if (c > 0.9999) return mat3(1.0);            // 方向相同
-        if (c < -0.9999) return mat3(-1.0, 0, 0, 0, -1, 0, 0, 0, 1); // 相反
-        float k = 1.0 / (1.0 + c);
-        return mat3(
-            v.x * v.x * k + c,      v.y * v.x * k - v.z,  v.z * v.x * k + v.y,
-            v.x * v.y * k + v.z,    v.y * v.y * k + c,    v.z * v.y * k - v.x,
-            v.x * v.z * k - v.y,    v.y * v.z * k + v.x,  v.z * v.z * k + c);
+    mat3 calcRotation(vec3 Axis, float Angle)
+    {
+	    float c = cos(Angle);
+	    float sub_c = 1.0 - c;
+	    float s = sin(Angle);
+	    return mat3(
+		    vec3(c + pow(Axis.x, 2.0) * sub_c,
+			    Axis.y * Axis.x * sub_c + Axis.z * s,
+			    Axis.z * Axis.x * sub_c - Axis.y * s),
+		    vec3(Axis.x * Axis.y * sub_c - Axis.z * s,
+			    c + pow(Axis.y, 2.0) * sub_c,
+			    Axis.z * Axis.y * sub_c + Axis.x * s),
+		    vec3(Axis.x * Axis.z * sub_c + Axis.y * s,
+			    Axis.y * Axis.z * sub_c - Axis.x * s,
+			    c + pow(Axis.z, 2.0) * sub_c));
     }
     void materialVertex(inout MaterialVertexInputs material) {
-         // 计算顶点的世界位置
-        vec3 worldPos = getPosition().xyz;
-        // 计算法线方向
-        vec3 normal = normalize(getCustom1().xyz);
-        // 计算旋转矩阵
-        mat3 rotMat = rotationAlign(vec3(0, 0, 1), normal);
-        // 计算缩放后的半径
+        material.vnormal = normalize(getCustom1());
+
+        mat3 RotMat = mat3(1.0);
+        vec3 QuadNormal = vec3(0.0, 0.0, 1.0);
         float scaledRadius = getCustom0().r * materialParams.radiusScale;
-        // 计算顶点的局部坐标
-        vec2 quadPos = material.uv0.xy;
-        // 计算顶点的最终位置
-        vec3 finalPos = rotMat * scaledRadius * vec3(quadPos, 0.0) + worldPos;
-        // 如果处于深度预传递阶段，调整顶点位置
+        if(abs(getCustom1().xyz) != QuadNormal)
+        {
+            vec3 rotAxis = normalize(cross(QuadNormal, getCustom1().xyz));
+            float rotAngle = acos(dot(QuadNormal, getCustom1().xyz));
+            RotMat = calcRotation(rotAxis, rotAngle);
+        }
+        vec3 worldPos = RotMat * scaledRadius * vec3(material.uv0.xy,0) + getPosition().xyz;
         if (materialParams.depthPrepass) {
             vec3 viewDir = normalize(worldPos - getWorldCameraPosition());
-            finalPos += viewDir * scaledRadius * materialParams.forwardFactor;
+            worldPos += viewDir * scaledRadius * materialParams.forwardFactor;
         }
-        material.worldPosition = vec4(finalPos, 1.0);
-        // material.worldPosition = getClipFromWorldMatrix() * vec4(finalPos, 1.0);
-        // 传递法线和颜色到片段着色器
-        //material.vnormal = normalize(getCustom1());
+        material.worldPosition = vec4(worldPos, 1.0);
     }
 }
 fragment {

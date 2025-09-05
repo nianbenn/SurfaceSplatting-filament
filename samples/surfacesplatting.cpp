@@ -55,7 +55,7 @@ struct SVertex {
 
 struct SApp {
     Engine* _pEngine;
-    Camera* _pCamera;
+    //Camera* _pCamera;
     // Entity camera;
     Skybox* _pSkybox;
 
@@ -89,7 +89,7 @@ static std::vector<uint32_t> kIndices;
 int main(int argc, char* argv[]) {
     Config config;
     config.title = "surfacesplatting";
-    config.cameraMode = camutils::Mode::FREE_FLIGHT;
+    //config.cameraMode = camutils::Mode::FREE_FLIGHT;
     SApp app;
     auto setup = [&app](Engine* vEngine, View* vView, Scene* vScene) {
         app._pEngine = vEngine;
@@ -99,9 +99,9 @@ int main(int argc, char* argv[]) {
         initVbIb(vEngine, app);
         createSurfaceSplat(vEngine, vScene, app);
 
-        app._pCamera = &vView->getCamera();
-        vView->setCamera(app._pCamera);
-        setupCamera(app);
+        //app._pCamera = &vView->getCamera();
+        //vView->setCamera(app._pCamera);
+        //setupCamera(app);
 
         app._pSkybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*vEngine);
         vScene->setSkybox(app._pSkybox);
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
     };
 
     FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.setCameraFocalLength(10.0f);
+    //filamentApp.setCameraFocalLength(5.0f);
     //filamentApp.setCameraNearFar(0.01f, 100.0f);
     filamentApp.run(config, setup, cleanup);
     return 0;
@@ -170,7 +170,6 @@ static void initVbIb(Engine * vEngine, SApp & vApp) {
         uint32_t base = surfId * 4; // 每个 surfel 占 4 个顶点
         for (uint32_t k = 0; k < 6; ++k) kIndices.push_back(base + quadIndices[k]);
     }
-    //for (size_t i = 0; i < pointNumber; i++) kIndices[i] = static_cast<uint32_t>(i);
 
     float minx = 1e9, miny = 1e9, minz = 1e9;
     float maxx = -1e9, maxy = -1e9, maxz = -1e9;
@@ -247,25 +246,24 @@ static void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp) {
     vScene->addEntity(vApp._Renderable);
 }
 // 摄像机设置
-static void setupCamera(SApp& vApp) {
-    // 计算点云中心和合适的距离
-    float centerX = (vApp._MinBounds.x + vApp._MaxBounds.x) / 2.0f;
-    float centerY = (vApp._MinBounds.y + vApp._MaxBounds.y) / 2.0f;
-    float centerZ = (vApp._MinBounds.z + vApp._MaxBounds.z) / 2.0f;
-    float sizeX = vApp._MaxBounds.x - vApp._MinBounds.x;
-    float sizeY = vApp._MaxBounds.y - vApp._MinBounds.y;
-    float sizeZ = vApp._MaxBounds.z - vApp._MinBounds.z;
-    float _Radius = std::sqrt(sizeX * sizeX + sizeY * sizeY + sizeZ * sizeZ) * 0.5f;
-    float cameraDistance = _Radius * 2.5f;
-
-    filament::math::float3 eye(centerX + cameraDistance, centerY, centerZ + cameraDistance);
-    filament::math::float3 lookAt(centerX, centerY, centerZ);
-    filament::math::float3 up(0, 1, 0);
-    vApp._pCamera->lookAt(eye, lookAt, up);
-    std::cout << vApp._pCamera->getPosition().x << " " << vApp._pCamera->getPosition().y << " "
-              << vApp._pCamera->getPosition().z << std::endl;
-}
-// 加载Rsf文件
+//static void setupCamera(SApp& vApp) {
+//    // 计算点云中心和合适的距离
+//    float centerX = (vApp._MinBounds.x + vApp._MaxBounds.x) / 2.0f;
+//    float centerY = (vApp._MinBounds.y + vApp._MaxBounds.y) / 2.0f;
+//    float centerZ = (vApp._MinBounds.z + vApp._MaxBounds.z) / 2.0f;
+//    float sizeX = vApp._MaxBounds.x - vApp._MinBounds.x;
+//    float sizeY = vApp._MaxBounds.y - vApp._MinBounds.y;
+//    float sizeZ = vApp._MaxBounds.z - vApp._MinBounds.z;
+//    float _Radius = std::sqrt(sizeX * sizeX + sizeY * sizeY + sizeZ * sizeZ) * 0.5f;
+//    float cameraDistance = _Radius * 2.5f;
+//
+//    filament::math::float3 eye(centerX + cameraDistance, centerY, centerZ + cameraDistance);
+//    filament::math::float3 lookAt(centerX, centerY, centerZ);
+//    filament::math::float3 up(0, 1, 0);
+//    vApp._pCamera->lookAt(eye, lookAt, up);
+//    std::cout << vApp._pCamera->getPosition().x << " " << vApp._pCamera->getPosition().y << " "
+//              << vApp._pCamera->getPosition().z << std::endl;
+//}
 static bool readBinFile(const std::string& vFileName, std::vector<char>& voBuffer) {
     std::ifstream File(vFileName, std::ios::binary);
     if (!File) {
