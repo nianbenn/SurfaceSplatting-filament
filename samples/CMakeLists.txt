@@ -301,7 +301,7 @@ if (NOT ANDROID)
     #add_demo(viewtest)
     #add_demo(overdraw_demo)
     add_demo(point_render)
-    add_demo(surfacesplating)
+    add_demo(surfacesplatting)
 
     # Sample app specific
 #    target_link_libraries(frame_generator PRIVATE imageio)

@@ -1,17 +1,16 @@
-
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
+#include <filament/RenderTarget.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
-#include <filament/TransformManager.h>
 #include <filament/TextureSampler.h>
+#include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
-#include <filament/RenderTarget.h>
 
 #include <utils/EntityManager.h>
 
@@ -24,7 +23,6 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
-#include <filesystem>
 
 #include "generated/resources/resources.h"
 
@@ -38,7 +36,7 @@ using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 using AttributeType = VertexBuffer::AttributeType;
 
-//extern "C" __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
+extern "C" __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
 
 struct SSurfel {
     float3 _Position;
@@ -47,30 +45,30 @@ struct SSurfel {
     float4 _Color;
 };
 
+struct SVertex {
+    math::float3 _Position;    
+    math::float3 _Normal; 
+    float _Radius;  
+    math::float4 _Color;        
+    math::float2 _Quad;   
+};
+
 struct SApp {
     Engine* _pEngine;
     Camera* _pCamera;
     // Entity camera;
     Skybox* _pSkybox;
-    Box _Box;
 
     VertexBuffer* _pVb;
     IndexBuffer* _pIb;
     Material* _pMat;
     MaterialInstance* _pMatInstance;
-    
+
     Texture* _pTex;
     Entity _Renderable;
 
-    // 离屏渲染用的资源
-    Texture* _pColorTex;
-    Texture* _pNormalTex;
-    RenderTarget* _pSplatTarget;
-    View* _pSplatView;
-    SwapChain* _pSwapChain;
-    Renderer* _pRenderer;
-
     std::vector<SSurfel> _Surfels;
+    std::vector<SVertex> _Vertices;
     float3 _MinBounds;
     float3 _MaxBounds;
 };
@@ -82,18 +80,16 @@ static void setupCamera(SApp& vApp);
 static void createSplatTexture(Engine* vEngine, SApp& vApp);
 static void createPointRender(Engine* vEngine, Scene* vScene, SApp& vApp);
 static void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp);
-// 加载rsf文件
+
 static bool readBinFile(const std::string& vFileName, std::vector<char>& voBuffer);
 static bool loadRsfFile(const std::string& vFileName, std::vector<SSurfel>& voSurfels);
 
 static std::vector<uint32_t> kIndices;
 
-int main(int argc, char* argv[])
-{
-    std::cout << "Current working directory: " << std::filesystem::current_path() << std::endl;
+int main(int argc, char* argv[]) {
     Config config;
-    config.title = "point_render";
-    //config.cameraMode = camutils::Mode::FREE_FLIGHT;
+    config.title = "surfacesplatting";
+    config.cameraMode = camutils::Mode::FREE_FLIGHT;
     SApp app;
     auto setup = [&app](Engine* vEngine, View* vView, Scene* vScene) {
         app._pEngine = vEngine;
@@ -101,16 +97,16 @@ int main(int argc, char* argv[])
         createSplatTexture(vEngine, app);
         // 加载rsf文件并初始化Vb,Ib
         initVbIb(vEngine, app);
-        createPointRender(vEngine, vScene, app);
-        
+        createSurfaceSplat(vEngine, vScene, app);
+
         app._pCamera = &vView->getCamera();
         vView->setCamera(app._pCamera);
         setupCamera(app);
 
-        app._pSkybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0}).build(*vEngine);
+        app._pSkybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*vEngine);
         vScene->setSkybox(app._pSkybox);
     };
-    auto cleanup = [&app](Engine* vEngine, View* vView, Scene* vScene) { 
+    auto cleanup = [&app](Engine* vEngine, View* view, Scene* vScene) {
         vEngine->destroy(app._pSkybox);
         vEngine->destroy(app._Renderable);
         vEngine->destroy(app._pMatInstance);
@@ -121,7 +117,7 @@ int main(int argc, char* argv[])
 
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.setCameraFocalLength(10.0f);
-    filamentApp.setCameraNearFar(0.01f, 100.0f);
+    //filamentApp.setCameraNearFar(0.01f, 100.0f);
     filamentApp.run(config, setup, cleanup);
     return 0;
 }
@@ -129,8 +125,9 @@ int main(int argc, char* argv[])
 constexpr uint32_t TEXTURE_SIZE = 128;
 static void createSplatTexture(Engine* vEngine, SApp& vApp) {
     static image::LinearImage splat(3, 3, 1);
-    splat.getPixelRef(1,1)[0] = 0.25f;
-    splat = image::resampleImage(splat, TEXTURE_SIZE, TEXTURE_SIZE, image::Filter::GAUSSIAN_SCALARS);
+    splat.getPixelRef(1, 1)[0] = 0.25f;
+    splat = image::resampleImage(splat, TEXTURE_SIZE, TEXTURE_SIZE,
+            image::Filter::GAUSSIAN_SCALARS);
     // 创建纹理缓冲区
     Texture::PixelBufferDescriptor buffer(splat.getPixelRef(),
             size_t(TEXTURE_SIZE * TEXTURE_SIZE * sizeof(float)), Texture::Format::R,
@@ -144,62 +141,79 @@ static void createSplatTexture(Engine* vEngine, SApp& vApp) {
                       .build(*vEngine);
     vApp._pTex->setImage(*vEngine, 0, std::move(buffer));
 }
-static void initVbIb(Engine* vEngine, SApp& vApp) {
+void loadtestFile(std::vector<SSurfel>& voSurfels) {
+    voSurfels.resize(3);
+    for (size_t i = 0; i < voSurfels.size(); ++i) {
+        voSurfels[i]._Position = float3(0+i, 0+i*i, 0+i*i);
+        voSurfels[i]._Radius =5.0f;
+        voSurfels[i]._Normal = float3(1, 1, 1);
+        voSurfels[i]._Color = float4(1, 0, 0, 1);
+    }
+}
+
+static void initVbIb(Engine * vEngine, SApp & vApp) {
     // 加载Rsf文件
     std::cout << "isloadRsfSuccess : " << loadRsfFile(FilamentApp::getRootAssetsPath() + pRsfPath, vApp._Surfels) << std::endl;
     std::cout << "Point number: " << vApp._Surfels.size() << std::endl;
-    const uint32_t pointNumber = vApp._Surfels.size();
-    
-    kIndices.resize(pointNumber);
-    for (size_t i = 0; i < pointNumber; i++) kIndices[i] = static_cast<uint32_t>(i);
-    //for (size_t i = 0; i < pointNumber; i++) std::cout << kIndices[i] << std::endl;
+    // VBO
+    vApp._Vertices.reserve(vApp._Surfels.size() * 4);
+    static const math::float2 quad[4] = { { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 } };
+    for (const auto& s: vApp._Surfels) {
+        for (int i = 0; i < 4; ++i)
+            vApp._Vertices.push_back({ s._Position, s._Normal, s._Radius, s._Color, quad[i]});
+    }
+    const uint32_t pointNumber = vApp._Vertices.size();
+    // VI
+    static constexpr uint32_t quadIndices[6] = { 0, 1, 2, 1, 3, 2 };
+    kIndices.reserve(vApp._Surfels.size()*6);
+    for (uint32_t surfId = 0; surfId < vApp._Surfels.size(); ++surfId) {
+        uint32_t base = surfId * 4; // 每个 surfel 占 4 个顶点
+        for (uint32_t k = 0; k < 6; ++k) kIndices.push_back(base + quadIndices[k]);
+    }
+    //for (size_t i = 0; i < pointNumber; i++) kIndices[i] = static_cast<uint32_t>(i);
 
-    float minx = 1e9,miny = 1e9,minz = 1e9;
+    float minx = 1e9, miny = 1e9, minz = 1e9;
     float maxx = -1e9, maxy = -1e9, maxz = -1e9;
     for (size_t i = 0; i < pointNumber; i++) {
-        minx = std::min(minx, vApp._Surfels[i]._Position.x);
-        miny = std::min(miny, vApp._Surfels[i]._Position.y);
-        minz = std::min(minz, vApp._Surfels[i]._Position.z);
-        maxx = std::max(maxx, vApp._Surfels[i]._Position.x);
-        maxy = std::max(maxy, vApp._Surfels[i]._Position.y);
-        maxz = std::max(maxz, vApp._Surfels[i]._Position.z);
+        minx = std::min(minx, vApp._Vertices[i]._Position.x);
+        miny = std::min(miny, vApp._Vertices[i]._Position.y);
+        minz = std::min(minz, vApp._Vertices[i]._Position.z);
+        maxx = std::max(maxx, vApp._Vertices[i]._Position.x);
+        maxy = std::max(maxy, vApp._Vertices[i]._Position.y);
+        maxz = std::max(maxz, vApp._Vertices[i]._Position.z);
     }
     vApp._MinBounds = { minx, miny, minz };
     vApp._MaxBounds = { maxx, maxy, maxz };
     std::cout << minx << " " << miny << " " << minz << " " << maxx << " " << maxy << " " << maxz
               << std::endl;
 
-    float3 mn(std::numeric_limits<float>::max());
-    float3 mx(-std::numeric_limits<float>::max());
-
-    for (const auto& s: vApp._Surfels) {
-        mn = min(mn, s._Position);
-        mx = max(mx, s._Position);
+    for (size_t i = 0; i < pointNumber; i++) {
+        vApp._Vertices[i]._Position.x =
+                2.0f * (vApp._Vertices[i]._Position.x - minx) / (maxx - minx) - 1.0f;
+        vApp._Vertices[i]._Position.y =
+                2.0f * (vApp._Vertices[i]._Position.y - miny) / (maxy - miny) - 1.0f;
+        vApp._Vertices[i]._Position.z =
+                2.0f * (vApp._Vertices[i]._Position.z - minz) / (maxz - minz) - 1.0f;
     }
-    vApp._Box.center = (mn + mx) * 0.5f;
-    vApp._Box.halfExtent = (mx - mn) * 0.5f;
 
-    for (size_t i = 0; i < pointNumber; ++i) {
-        vApp._Surfels[i]._Position.x = 2.0f * (vApp._Surfels[i]._Position.x - minx) / (maxx-minx)-1.0f;
-        vApp._Surfels[i]._Position.y = 2.0f * (vApp._Surfels[i]._Position.y - miny) / (maxy-miny)-1.0f;
-        vApp._Surfels[i]._Position.z = 2.0f * (vApp._Surfels[i]._Position.z - minz) / (maxz-minz)-1.0f;
-    }
 
     vApp._pVb = VertexBuffer::Builder()
-                     .vertexCount(static_cast<uint32_t>(vApp._Surfels.size()))
+                     .vertexCount(static_cast<uint32_t>(vApp._Vertices.size()))
                      .bufferCount(1)
                      .attribute(VertexAttribute::POSITION, 0, AttributeType::FLOAT3,
-                             offsetof(SSurfel, _Position), sizeof(SSurfel))
+                             offsetof(SVertex, _Position), sizeof(SVertex))
                      .attribute(VertexAttribute::CUSTOM1, 0, AttributeType::FLOAT3,
-                             offsetof(SSurfel, _Normal), sizeof(SSurfel))
+                             offsetof(SVertex, _Normal), sizeof(SVertex))
                      .attribute(VertexAttribute::CUSTOM0, 0, AttributeType::FLOAT,
-                             offsetof(SSurfel, _Radius), sizeof(SSurfel))
+                             offsetof(SVertex, _Radius), sizeof(SVertex))
                      .attribute(VertexAttribute::COLOR, 0, AttributeType::FLOAT4,
-                             offsetof(SSurfel, _Color), sizeof(SSurfel))
+                             offsetof(SVertex, _Color), sizeof(SVertex))
+                     .attribute(VertexAttribute::UV0, 0, AttributeType::FLOAT2, 
+                             offsetof(SVertex, _Quad), sizeof(SVertex))
                      .build(*vEngine);
     vApp._pVb->setBufferAt(*vEngine, 0,
-            VertexBuffer::BufferDescriptor(vApp._Surfels.data(),
-                    vApp._Surfels.size() * sizeof(SSurfel), nullptr));
+            VertexBuffer::BufferDescriptor(vApp._Vertices.data(),
+                    vApp._Vertices.size() * sizeof(SVertex), nullptr));
 
     vApp._pIb = IndexBuffer::Builder()
                      .indexCount(kIndices.size())
@@ -207,80 +221,49 @@ static void initVbIb(Engine* vEngine, SApp& vApp) {
                      .build(*vEngine);
 
     size_t byteCount = kIndices.size() * sizeof(uint32_t);
-    vApp._pIb->setBuffer(*vEngine,
-            IndexBuffer::BufferDescriptor(
-                kIndices.data(), byteCount, nullptr));
+    vApp._pIb->setBuffer(*vEngine, IndexBuffer::BufferDescriptor(kIndices.data(), byteCount, nullptr));
 }
-static void createPointRender(Engine* vEngine, Scene* vScene, SApp& vApp) {
+static void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp) {
     // 创建材质
-    vApp._pMat = Material::Builder()
-                      .package(RESOURCES_POINTRENDER_DATA, RESOURCES_POINTRENDER_SIZE)
+    vApp._pMat = Material::Builder().package(RESOURCES_SPLAT_DATA, RESOURCES_SPLAT_SIZE)
                       .build(*vEngine);
     vApp._Renderable = EntityManager::get().create();
     vApp._pMatInstance = vApp._pMat->createInstance();
-    vApp._pMatInstance->setParameter("fade", vApp._pTex,
-            TextureSampler(MinFilter::LINEAR, MagFilter::LINEAR));
-    vApp._pMatInstance->setParameter("pointSizeScale", 10.0f);
+
+    vApp._pMatInstance->setParameter("radiusScale", 0.25f);
+    vApp._pMatInstance->setParameter("forwardFactor", 0.5f);
+    vApp._pMatInstance->setParameter("depthPrepass", false);
+    //vApp._pMatInstance->setParameter("depthPrepass", true);
 
     RenderableManager::Builder(1)
-            .boundingBox(vApp._Box)
+            .boundingBox({ vApp._MinBounds, vApp._MaxBounds })
             .material(0, vApp._pMatInstance)
-            .geometry(0, RenderableManager::PrimitiveType::POINTS, vApp._pVb, vApp._pIb, 0, vApp._Surfels.size())
+            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vApp._pVb, vApp._pIb, 0,
+                    vApp._Vertices.size())
             .culling(false)
             .receiveShadows(false)
             .castShadows(false)
             .build(*vEngine, vApp._Renderable);
     vScene->addEntity(vApp._Renderable);
 }
-// 实现
-void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp)
-{
-    // 创建材质
-    vApp._pMat = Material::Builder()
-                      .package(RESOURCES_SPLAT_DATA, RESOURCES_SPLAT_SIZE)
-                      .build(*vEngine);
-    vApp._Renderable = EntityManager::get().create();
-   
-}
-void createOffscreenSplat(Engine* vEngine, Scene* vScene, View* vMainView, SApp& vApp) {
-    //// 1️ 取主窗口尺寸
-    //const uint32_t w = mainView->getViewport().width;
-    //const uint32_t h = mainView->getViewport().height;
-
-    //// 2️ 创建两张离屏纹理：颜色 + 法线
-    //auto makeTex = [engine](uint32_t width, uint32_t height) -> Texture* {
-    //    return Texture::Builder()
-    //            .width(width)
-    //            .height(height)
-    //            .levels(1)
-    //            .format(Texture::InternalFormat::RGBA16F)
-    //            .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
-    //            .sampler(Texture::Sampler::SAMPLER_2D)
-    //            .build(*engine);
-    //};
-    //app.colorTex = makeTex(w, h);
-    //app.normalTex = makeTex(w, h);
-
-
-}
 // 摄像机设置
 static void setupCamera(SApp& vApp) {
+    // 计算点云中心和合适的距离
     float centerX = (vApp._MinBounds.x + vApp._MaxBounds.x) / 2.0f;
     float centerY = (vApp._MinBounds.y + vApp._MaxBounds.y) / 2.0f;
     float centerZ = (vApp._MinBounds.z + vApp._MaxBounds.z) / 2.0f;
     float sizeX = vApp._MaxBounds.x - vApp._MinBounds.x;
     float sizeY = vApp._MaxBounds.y - vApp._MinBounds.y;
     float sizeZ = vApp._MaxBounds.z - vApp._MinBounds.z;
-    float radius = std::sqrt(sizeX * sizeX + sizeY * sizeY + sizeZ * sizeZ) * 0.5f;
-    float cameraDistance = radius * 2.5f;
+    float _Radius = std::sqrt(sizeX * sizeX + sizeY * sizeY + sizeZ * sizeZ) * 0.5f;
+    float cameraDistance = _Radius * 2.5f;
 
-    //filament::math::float3 eye(centerX+cameraDistance, centerY, centerZ + cameraDistance);
-    filament::math::float3 eye(300, 300, 300);
+    filament::math::float3 eye(centerX + cameraDistance, centerY, centerZ + cameraDistance);
     filament::math::float3 lookAt(centerX, centerY, centerZ);
     filament::math::float3 up(0, 1, 0);
     vApp._pCamera->lookAt(eye, lookAt, up);
-    std::cout << "camerapos:" << vApp._pCamera->getPosition().x << " " << vApp._pCamera->getPosition().y << " "
-              << vApp._pCamera->getPosition().z << std::endl; 
+    std::cout << vApp._pCamera->getPosition().x << " " << vApp._pCamera->getPosition().y << " "
+              << vApp._pCamera->getPosition().z << std::endl;
 }
 // 加载Rsf文件
 static bool readBinFile(const std::string& vFileName, std::vector<char>& voBuffer) {
@@ -309,7 +292,7 @@ static bool loadRsfFile(const std::string& vFileName, std::vector<SSurfel>& voSu
     std::memcpy(Bounds.data(), Buffer.data() + sizeof(Header), sizeof(Bounds));
 
     const std::uint32_t NumSurfels = Header[0];
-    //const std::uint32_t NumSurfels = 10000;
+    // const std::uint32_t NumSurfels = 10000;
     std::vector<float> PosRadiusNormal(static_cast<size_t>(NumSurfels * 8));
     std::vector<std::uint8_t> Colors(static_cast<size_t>(NumSurfels * 4));
     std::memcpy(PosRadiusNormal.data(), Buffer.data() + Header[1],
