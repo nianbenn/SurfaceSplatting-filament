@@ -59,7 +59,7 @@ struct SApp {
     MaterialInstance* _pMatInstance;
     
     Texture* _pTex;
-    Entity _Renderable;
+    Entity _RenderableEntity;
 
     // 离屏渲染用的资源
     Texture* _pColorTex;
@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
     };
     auto cleanup = [&app](Engine* vEngine, View* vView, Scene* vScene) { 
         vEngine->destroy(app._pSkybox);
-        vEngine->destroy(app._Renderable);
+        vEngine->destroy(app._RenderableEntity);
         vEngine->destroy(app._pMatInstance);
         vEngine->destroy(app._pMat);
         vEngine->destroy(app._pVb);
@@ -216,11 +216,11 @@ static void createPointRender(Engine* vEngine, Scene* vScene, SApp& vApp) {
     vApp._pMat = Material::Builder()
                       .package(RESOURCES_POINTRENDER_DATA, RESOURCES_POINTRENDER_SIZE)
                       .build(*vEngine);
-    vApp._Renderable = EntityManager::get().create();
+    vApp._RenderableEntity = EntityManager::get().create();
     vApp._pMatInstance = vApp._pMat->createInstance();
     vApp._pMatInstance->setParameter("fade", vApp._pTex,
             TextureSampler(MinFilter::LINEAR, MagFilter::LINEAR));
-    vApp._pMatInstance->setParameter("pointSizeScale", 10.0f);
+    vApp._pMatInstance->setParameter("pointSizeScale", 50.0f);
 
     RenderableManager::Builder(1)
             .boundingBox(vApp._Box)
@@ -229,8 +229,8 @@ static void createPointRender(Engine* vEngine, Scene* vScene, SApp& vApp) {
             .culling(false)
             .receiveShadows(false)
             .castShadows(false)
-            .build(*vEngine, vApp._Renderable);
-    vScene->addEntity(vApp._Renderable);
+            .build(*vEngine, vApp._RenderableEntity);
+    vScene->addEntity(vApp._RenderableEntity);
 }
 // 实现
 void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp)
@@ -239,7 +239,7 @@ void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp)
     vApp._pMat = Material::Builder()
                       .package(RESOURCES_SPLAT_DATA, RESOURCES_SPLAT_SIZE)
                       .build(*vEngine);
-    vApp._Renderable = EntityManager::get().create();
+    vApp._RenderableEntity = EntityManager::get().create();
    
 }
 void createOffscreenSplat(Engine* vEngine, Scene* vScene, View* vMainView, SApp& vApp) {

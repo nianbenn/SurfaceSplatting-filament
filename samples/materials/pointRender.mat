@@ -2,20 +2,16 @@ material {
     name : PointRender,
     requires : [
         position, 
-        custom1, 
+        tangents,
         custom0, 
         color
     ],
     shadingModel: unlit,
-    blending : opaque,
+    blending : add,
     parameters : [
         { 
             type : float, 
             name : pointSizeScale 
-        },
-        {
-            type : sampler2d,
-            name : fade
         }
     ]
 }

@@ -65,7 +65,7 @@ struct SApp {
     MaterialInstance* _pMatInstance;
 
     Texture* _pTex;
-    Entity _Renderable;
+    Entity _RenderableEntity;
 
     std::vector<SSurfel> _Surfels;
     std::vector<SVertex> _Vertices;
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
     };
     auto cleanup = [&app](Engine* vEngine, View* view, Scene* vScene) {
         vEngine->destroy(app._pSkybox);
-        vEngine->destroy(app._Renderable);
+        vEngine->destroy(app._RenderableEntity);
         vEngine->destroy(app._pMatInstance);
         vEngine->destroy(app._pMat);
         vEngine->destroy(app._pVb);
@@ -217,7 +217,7 @@ static void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp) {
     // 创建材质
     vApp._pMat = Material::Builder().package(RESOURCES_SPLAT_DATA, RESOURCES_SPLAT_SIZE)
                       .build(*vEngine);
-    vApp._Renderable = EntityManager::get().create();
+    vApp._RenderableEntity = EntityManager::get().create();
     vApp._pMatInstance = vApp._pMat->createInstance();
 
     vApp._pMatInstance->setParameter("radiusScale", 0.25f);
@@ -233,8 +233,8 @@ static void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp) {
             .culling(false)
             .receiveShadows(false)
             .castShadows(false)
-            .build(*vEngine, vApp._Renderable);
-    vScene->addEntity(vApp._Renderable);
+            .build(*vEngine, vApp._RenderableEntity);
+    vScene->addEntity(vApp._RenderableEntity);
 }
 // 摄像机设置
 static void setupCamera(SApp& vApp) {

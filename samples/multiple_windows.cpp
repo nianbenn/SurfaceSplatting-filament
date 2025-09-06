@@ -303,7 +303,8 @@ void setup_static_scene(Window& w, Engine* engine) {
     SDL_GL_GetDrawableSize(w.sdl_window, &width, &height);
     w.camera->setProjection(kFieldOfViewDeg, double(width) / double(height),
                             kNearPlane, kFarPlane);
-    w.camera->lookAt({0.0f, 0.0f, kCameraDist}, kCameraCenter, kCameraUp);
+    //w.camera->lookAt({0.0f, 0.0f, kCameraDist}, kCameraCenter, kCameraUp);
+    w.camera->lookAt({ 0.0f, 0.0f, 10.0f }, kCameraCenter, kCameraUp);
 
     w.needsDraw = true;
 }
