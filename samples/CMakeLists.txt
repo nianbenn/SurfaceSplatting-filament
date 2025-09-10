@@ -41,6 +41,7 @@ set(MATERIAL_SRCS
         #materials/texturedLit.mat
 	    materials/pointRender.mat
 	    materials/splat.mat
+        materials/splatdepth.mat
 )
 
 # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
