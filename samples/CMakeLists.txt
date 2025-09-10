@@ -41,6 +41,7 @@ set(MATERIAL_SRCS
         #materials/texturedLit.mat
 	    materials/pointRender.mat
 	    materials/splat.mat
+        materials/testWorldPos.mat
 )
 
 # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
@@ -302,6 +303,7 @@ if (NOT ANDROID)
     #add_demo(overdraw_demo)
     add_demo(point_render)
     add_demo(surfacesplatting)
+    add_demo(surfaceSplat)
 
     # Sample app specific
 #    target_link_libraries(frame_generator PRIVATE imageio)

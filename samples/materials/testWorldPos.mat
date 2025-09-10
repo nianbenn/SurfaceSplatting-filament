@@ -1,0 +1,24 @@
+material {
+    name : debugWorldPos,
+    shadingModel : unlit,
+    blending : opaque,
+    requires : [ position ],
+    variables : [ vWorldPos ]
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        vec3 localPos = getPosition().xyz;
+        vec3 worldPos = (getWorldFromModelMatrix() * vec4(localPos, 1.0)).xyz;
+        material.vWorldPos = vec4(worldPos, 1.0);
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        vec3 color = normalize(variable_vWorldPos.xyz);
+        material.baseColor = vec4(abs(variable_vWorldPos.xyz) / 10.0,1.0);
+        //material.baseColor = vec4(0.0,1.0,0.0,1.0);
+    }
+}
