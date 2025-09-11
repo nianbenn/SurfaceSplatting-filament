@@ -85,9 +85,10 @@ int main(int argc, char* argv[]) {
         const uint32_t pointNumber = app._Surfels.size();
         app._Indexs.resize(pointNumber);
         for (size_t i = 0; i < pointNumber; ++i) app._Indexs[i] = static_cast<uint32_t>(i);
+        constexpr float QuadVertices[] = { -0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5 };
         app._pVb = VertexBuffer::Builder()
                            .vertexCount(pointNumber)
-                           .bufferCount(1)
+                           .bufferCount(2)
                            .attribute(VertexAttribute::POSITION, 0, AttributeType::FLOAT3,
                                    offsetof(SSurfel, _Position), sizeof(SSurfel))
                            .attribute(VertexAttribute::TANGENTS, 0, AttributeType::FLOAT3,
@@ -96,6 +97,8 @@ int main(int argc, char* argv[]) {
                                    offsetof(SSurfel, _Radius), sizeof(SSurfel))
                            .attribute(VertexAttribute::COLOR, 0, AttributeType::FLOAT4,
                                    offsetof(SSurfel, _Color), sizeof(SSurfel))
+                           //.attribute(VertexAttribute::CUSTOM1, 1, AttributeType::FLOAT2, 0,
+                           //        sizeof(float2))
                            .build(*vEngine);
         app._pVb->setBufferAt(*vEngine, 0,
                 VertexBuffer::BufferDescriptor(app._Surfels.data(),
@@ -146,13 +149,6 @@ int main(int argc, char* argv[]) {
     };
 
     FilamentApp& filamentApp = FilamentApp::get();
-    //filamentApp.animate([&app](Engine* engine, View* view, double now) {
-    //    const uint32_t w = view->getViewport().width;
-    //    const uint32_t h = view->getViewport().height;
-    //    const float aspect = (float) w / h;
-    //    app._pCamera->setProjection(60.0f, aspect, 0.1f, 100.0f);
-    //    app._pCamera->lookAt(float3(0, 0, 100), float3(0, 0, 0));
-    //});
     filamentApp.run(config, setup, cleanup);
     return 0;
 }

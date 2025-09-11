@@ -305,6 +305,7 @@ if (NOT ANDROID)
     add_demo(surfacesplatting)
     add_demo(surfacesplatting_lh)
     add_demo(camera_lh)
+    add_demo(surfacesplatting_gui)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
@@ -319,6 +320,7 @@ if (NOT ANDROID)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
     target_link_libraries(overdraw_demo PRIVATE gltf-demo-resources viewer)
+    target_link_libraries(surfacesplatting_gui PRIVATE viewer)
 
     if (FILAMENT_DISABLE_MATOPT)
         add_definitions(-DFILAMENT_DISABLE_MATOPT=1)
