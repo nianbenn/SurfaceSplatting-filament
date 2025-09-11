@@ -5,6 +5,7 @@
 #include <filament/MaterialInstance.h>
 #include <filament/RenderTarget.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/TextureSampler.h>
@@ -20,8 +21,6 @@
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 
-#include <math.h>
-
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -34,6 +33,8 @@ using namespace filament::math;
 using utils::Entity;
 using utils::EntityManager;
 
+using MinFilter = TextureSampler::MinFilter;
+using MagFilter = TextureSampler::MagFilter;
 using AttributeType = VertexBuffer::AttributeType;
 
 struct SSurfel {
@@ -43,107 +44,115 @@ struct SSurfel {
     float4 _Color;
 };
 
+struct SVertex {
+    math::float3 _Position;
+    math::float3 _Normal;
+    float _Radius;
+    math::float4 _Color;
+    math::float2 _Quad;
+};
+
 struct SApp {
     Engine* _pEngine;
-    Camera* _pCamera;
     Skybox* _pSkybox;
 
     VertexBuffer* _pVb;
     IndexBuffer* _pIb;
     Material* _pMat;
     MaterialInstance* _pMatInstance;
+    Material* _pDepthMat;
+    MaterialInstance* _PDepthMatInstance;
 
-    Entity _RenderableEntity;
+    Texture* _pTex;
+    Entity _Renderable[2];
 
     std::vector<SSurfel> _Surfels;
-    std::vector<uint32_t> _Indexs;
+    std::vector<SVertex> _Vertices;
+    std::vector<uint32_t> _KIndices;
     float3 _MinBounds;
     float3 _MaxBounds;
 };
 
-static const char* pRsfPath =
-        "F:/Filament/Windows/SurfaceSplatting-filament/samples/MyAssets/painted_santa_kd.rsf";
+static const char* pRsfPath = "MyAssets/painted_santa_kd.rsf";
 
 static void setupCamera(SApp& vApp);
+static void createSplatTexture(Engine* vEngine, SApp& vApp);
 static void createPointRender(Engine* vEngine, Scene* vScene, SApp& vApp);
-
-static inline float radians(float degress);
+static void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp);
 
 static bool readBinFile(const std::string& vFileName, std::vector<char>& voBuffer);
 static bool loadRsfFile(const std::string& vFileName, std::vector<SSurfel>& voSurfels);
+
 int main(int argc, char* argv[]) {
     Config config;
     config.title = "surfacesplatting";
     SApp app;
-
     auto setup = [&app](Engine* vEngine, View* vView, Scene* vScene) {
         app._pEngine = vEngine;
 
-        std::cout << "isLoadRsfSuccess:" << loadRsfFile(pRsfPath, app._Surfels) << std::endl;
+        std::cout << "isloadRsfSuccess : "
+            << loadRsfFile(FilamentApp::getRootAssetsPath() + pRsfPath, app._Surfels)
+            << std::endl;
 
-        #pragma region InitVA0AndIA0
-        const uint32_t pointNumber = app._Surfels.size();
-        app._Indexs.resize(pointNumber);
-        for (size_t i = 0; i < pointNumber; ++i) app._Indexs[i] = static_cast<uint32_t>(i);
-        constexpr float QuadVertices[] = { -0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5 };
+        #pragma region InitVbIb
+        app._Vertices.resize(app._Surfels.size() * 4);
+        static const math::float2 quad[4] = { { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 } };
+        for (const auto& s: app._Surfels) {
+            for (int i = 0; i < 4; ++i)
+                app._Vertices.push_back({ s._Position, s._Normal, s._Radius, s._Color, quad[i] });
+        }
+        const uint32_t pointNumber = app._Vertices.size();
+        static constexpr uint32_t quadIndices[6] = { 0, 1, 2, 3, 2, 1 };
+        app._KIndices.resize(app._Surfels.size() * 6);
+
+        for (uint32_t surfId = 0; surfId < app._Surfels.size(); ++surfId) {
+            uint32_t base = surfId * 4; // 每个 surfel 占 4 个顶点
+            for (uint32_t k = 0; k < 6; ++k) app._KIndices.push_back(base + quadIndices[k]);
+        }
+
         app._pVb = VertexBuffer::Builder()
-                           .vertexCount(pointNumber)
-                           .bufferCount(2)
-                           .attribute(VertexAttribute::POSITION, 0, AttributeType::FLOAT3,
-                                   offsetof(SSurfel, _Position), sizeof(SSurfel))
-                           .attribute(VertexAttribute::TANGENTS, 0, AttributeType::FLOAT3,
-                                   offsetof(SSurfel, _Normal), sizeof(SSurfel))
-                           .attribute(VertexAttribute::CUSTOM0, 0, AttributeType::FLOAT,
-                                   offsetof(SSurfel, _Radius), sizeof(SSurfel))
-                           .attribute(VertexAttribute::COLOR, 0, AttributeType::FLOAT4,
-                                   offsetof(SSurfel, _Color), sizeof(SSurfel))
-                           //.attribute(VertexAttribute::CUSTOM1, 1, AttributeType::FLOAT2, 0,
-                           //        sizeof(float2))
-                           .build(*vEngine);
+                        .vertexCount(static_cast<uint32_t>(app._Vertices.size()))
+                        .bufferCount(1)
+                        .attribute(VertexAttribute::POSITION, 0, AttributeType::FLOAT3,
+                                offsetof(SVertex, _Position), sizeof(SVertex))
+                        .attribute(VertexAttribute::CUSTOM1, 0, AttributeType::FLOAT3,
+                                offsetof(SVertex, _Normal), sizeof(SVertex))
+                        .attribute(VertexAttribute::CUSTOM0, 0, AttributeType::FLOAT,
+                                offsetof(SVertex, _Radius), sizeof(SVertex))
+                        .attribute(VertexAttribute::COLOR, 0, AttributeType::FLOAT4,
+                                offsetof(SVertex, _Color), sizeof(SVertex))
+                        .attribute(VertexAttribute::CUSTOM2, 0, AttributeType::FLOAT2,
+                                offsetof(SVertex, _Quad), sizeof(SVertex))
+                        .build(*vEngine);
+
         app._pVb->setBufferAt(*vEngine, 0,
-                VertexBuffer::BufferDescriptor(app._Surfels.data(),
-                        app._Surfels.size() * sizeof(SSurfel), nullptr));
+                VertexBuffer::BufferDescriptor(app._Vertices.data(),
+                        app._Vertices.size() * sizeof(SVertex), nullptr));
 
         app._pIb = IndexBuffer::Builder()
-                           .indexCount(app._Indexs.size())
-                           .bufferType(IndexBuffer::IndexType::UINT)
-                           .build(*vEngine);
-        app._pIb->setBuffer(*vEngine, IndexBuffer::BufferDescriptor(app._Indexs.data(),
-                                              app._Indexs.size() * sizeof(uint32_t), nullptr));
+                        .indexCount(app._KIndices.size())
+                        .bufferType(IndexBuffer::IndexType::UINT)
+                        .build(*vEngine);
+        size_t byteCount = app._KIndices.size() * sizeof(uint32_t);
+        app._pIb->setBuffer(*vEngine,
+                IndexBuffer::BufferDescriptor(app._KIndices.data(), byteCount, nullptr));
+
         #pragma endregion
 
-        #pragma region LoadMat
-        app._pMat = Material::Builder()
-                            .package(RESOURCES_POINTRENDER_DATA, RESOURCES_POINTRENDER_SIZE)
-                            .build(*vEngine);
-        app._RenderableEntity = EntityManager::get().create();
-        app._pMatInstance = app._pMat->createInstance();
-        app._pMatInstance->setParameter("pointSizeScale", 10.0f);
-
-        RenderableManager::Builder(1)
-                .material(0, app._pMatInstance)
-                .geometry(0, RenderableManager::PrimitiveType::POINTS, app._pVb, app._pIb)
-                .culling(false)
-                .receiveShadows(false)
-                .castShadows(false)
-                .build(*vEngine, app._RenderableEntity);
-        auto& tcm = vEngine->getTransformManager();
-        tcm.setTransform(tcm.getInstance(app._RenderableEntity), mat4f::scaling(0.07f));
-        vScene->addEntity(app._RenderableEntity);
-        #pragma endregion
-
-        app._pCamera = &vView->getCamera();
-        Viewport vp = vView->getViewport();
-        app._pCamera->setProjection(60.0f, float(vp.width) / float(vp.height), 0.1f,100.0f);
+        createSurfaceSplat(vEngine, vScene, app);
 
         app._pSkybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*vEngine);
         vScene->setSkybox(app._pSkybox);
     };
+
     auto cleanup = [&app](Engine* vEngine, View* view, Scene* vScene) {
         vEngine->destroy(app._pSkybox);
-        vEngine->destroy(app._RenderableEntity);
+        vEngine->destroy(app._Renderable[0]);
+        vEngine->destroy(app._Renderable[1]);
         vEngine->destroy(app._pMatInstance);
         vEngine->destroy(app._pMat);
+        vEngine->destroy(app._PDepthMatInstance);
+        vEngine->destroy(app._pDepthMat);
         vEngine->destroy(app._pVb);
         vEngine->destroy(app._pIb);
     };
@@ -153,7 +162,46 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-static inline float radians(float degress) { return degress * M_PI / 180.0f; }
+static void createSurfaceSplat(Engine* vEngine, Scene* vScene, SApp& vApp) {
+    vApp._pDepthMat = Material::Builder()
+                              .package(RESOURCES_SPLATDEPTH_DATA, RESOURCES_SPLATDEPTH_SIZE)
+                              .build(*vEngine);
+    vApp._Renderable[1] = EntityManager::get().create();
+    vApp._PDepthMatInstance = vApp._pDepthMat->createInstance();
+    vApp._PDepthMatInstance->setParameter("radiusScale", 0.15f);
+    vApp._PDepthMatInstance->setParameter("forwardFactor", 0.1f);
+    vApp._PDepthMatInstance->setParameter("depthPrepass", true);
+
+    RenderableManager::Builder(1)
+            .material(0, vApp._PDepthMatInstance)
+            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vApp._pVb, vApp._pIb, 0,
+                    vApp._Vertices.size())
+            .culling(false)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(*vEngine, vApp._Renderable[1]);
+
+    vApp._pMat =
+            Material::Builder().package(RESOURCES_SPLAT_DATA, RESOURCES_SPLAT_SIZE).build(*vEngine);
+    vApp._Renderable[0] = EntityManager::get().create();
+    vApp._pMatInstance = vApp._pMat->createInstance();
+
+    vApp._pMatInstance->setParameter("radiusScale", 0.15f);
+    vApp._pMatInstance->setParameter("forwardFactor", 0.1f);
+    vApp._pMatInstance->setParameter("depthPrepass", false);
+
+    RenderableManager::Builder(1)
+            .material(0, vApp._pMatInstance)
+            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vApp._pVb, vApp._pIb, 0,
+                    vApp._Vertices.size())
+            .culling(false)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(*vEngine, vApp._Renderable[0]);
+
+    vScene->addEntity(vApp._Renderable[0]);
+}
+
 static bool readBinFile(const std::string& vFileName, std::vector<char>& voBuffer) {
     std::ifstream File(vFileName, std::ios::binary);
     if (!File) {
@@ -180,7 +228,6 @@ static bool loadRsfFile(const std::string& vFileName, std::vector<SSurfel>& voSu
     std::memcpy(Bounds.data(), Buffer.data() + sizeof(Header), sizeof(Bounds));
 
     const std::uint32_t NumSurfels = Header[0];
-    // const std::uint32_t NumSurfels = 10000;
     std::vector<float> PosRadiusNormal(static_cast<size_t>(NumSurfels * 8));
     std::vector<std::uint8_t> Colors(static_cast<size_t>(NumSurfels * 4));
     std::memcpy(PosRadiusNormal.data(), Buffer.data() + Header[1],
